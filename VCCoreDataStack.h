@@ -23,6 +23,7 @@
 //  THE SOFTWARE.
 
 #import <Foundation/Foundation.h>
+#import <CoreData/CoreData.h>
 
 @interface VCCoreDataStack : NSObject
 {
@@ -38,6 +39,8 @@
 @property (nonatomic, readonly) NSManagedObjectContext *managedObjectContext;
 
 - (id)initWithManagedObjectModelUrl:(NSURL *)managedObjectModelUrl;
+
+- (void)saveManagedObjectContext:(NSManagedObjectContext *)managedObjectContext;
 
 - (void)deleteCoreDataStack;
 

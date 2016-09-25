@@ -39,21 +39,12 @@
 	return self;
 }
 
-- (void)dealloc
-{
-	[_managedObjectModelUrl release], _managedObjectModelUrl = nil;
-	[_managedObjectModel release], _managedObjectModel = nil;
-	[_persistentStoreCoordinator release], _persistentStoreCoordinator = nil;
-	[_managedObjectContext release], _managedObjectContext = nil;
-	[super dealloc];
-}
-
 #pragma mark - Private Methods
 
 // Returns the URL to the application's Documents directory.
 - (NSURL *)applicationDocumentsDirectory
 {
-    return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+	return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
 }
 
 
@@ -63,75 +54,93 @@
 // If the model doesn't already exist, it is created from the application's model.
 - (NSManagedObjectModel *)managedObjectModel
 {
-    if (_managedObjectModel != nil) {
-        return _managedObjectModel;
-    }
-
-    _managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:_managedObjectModelUrl];
-    return _managedObjectModel;
+	if (_managedObjectModel != nil) {
+		return _managedObjectModel;
+	}
+	
+	_managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:_managedObjectModelUrl];
+	return _managedObjectModel;
 }
 
 // Returns the persistent store coordinator for the application.
 // If the coordinator doesn't already exist, it is created and the application's store added to it.
 - (NSPersistentStoreCoordinator *)persistentStoreCoordinator
 {
-    if (_persistentStoreCoordinator != nil) {
-        return _persistentStoreCoordinator;
-    }
-
+	if (_persistentStoreCoordinator != nil) {
+		return _persistentStoreCoordinator;
+	}
+	
 	NSString *fileName = [[_managedObjectModelUrl URLByDeletingPathExtension] lastPathComponent];
-    NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[fileName stringByAppendingString:@".sqlite"]];
-
-    NSError *error = nil;
-    _persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
-    if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error]) {
-        DebugLog(@"Unresolved error %@, %@", error, [error userInfo]);
-
+	NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[fileName stringByAppendingString:@".sqlite"]];
+	
+	NSError *error = nil;
+	_persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
+	if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error]) {
+		NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+		
 		// delete old file and create new one
 		[[NSFileManager defaultManager] removeItemAtURL:storeURL error:nil];
 		_persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
 		if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error]) {
-			DebugLog(@"Unresolved error %@, %@", error, [error userInfo]);
-			abort();
+			NSAssert(FALSE, @"Unresolved error %@, %@", error, [error userInfo]);
 		}
-    }
-
-    return _persistentStoreCoordinator;
+	}
+	
+	return _persistentStoreCoordinator;
 }
 
 // Used to propegate saves to the persistent store (disk) without blocking the UI
 - (NSManagedObjectContext *)managedObjectContext {
-    if (_managedObjectContext != nil) {
-        return _managedObjectContext;
-    }
-
-    NSPersistentStoreCoordinator *coordinator = [self persistentStoreCoordinator];
-    if (coordinator != nil) {
-        _managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
-        [_managedObjectContext performBlockAndWait:^{
-            [_managedObjectContext setPersistentStoreCoordinator:coordinator];
-        }];
-
-    }
-    return _managedObjectContext;
+	if (_managedObjectContext != nil) {
+		return _managedObjectContext;
+	}
+	
+	NSPersistentStoreCoordinator *coordinator = [self persistentStoreCoordinator];
+	if (coordinator != nil) {
+		_managedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSMainQueueConcurrencyType];
+		[_managedObjectContext performBlockAndWait:^{
+			[_managedObjectContext setPersistentStoreCoordinator:coordinator];
+		}];
+	}
+	return _managedObjectContext;
 }
 
+- (void)saveManagedObjectContext:(NSManagedObjectContext *)managedObjectContext
+{
+	if (managedObjectContext == nil) {
+		return;
+	}
+	
+	[managedObjectContext performBlockAndWait:^{
+		NSError *error = nil;
+		BOOL saved = [managedObjectContext save:&error];
+		if (!saved) {
+			// do some real error handling
+			NSAssert(FALSE, @"Unresolved error %@, %@", error, [error userInfo]);
+		}
+	}];
+	
+	[self saveManagedObjectContext:managedObjectContext.parentContext];
+}
 
 #pragma mark - Public Methods
 
 - (void)deleteCoreDataStack
 {
-	NSArray *stores = [_persistentStoreCoordinator persistentStores];
-
+	// delete context
+	_managedObjectContext = nil;
+	
+	// delete object model
+	_managedObjectModel = nil;
+	
+	// delete persistant store coordinater and all its stores
+	NSPersistentStoreCoordinator *cordinator = [self persistentStoreCoordinator];
+	NSArray *stores = [cordinator persistentStores];
 	for(NSPersistentStore *store in stores) {
-#warning Add error handling
-		[_persistentStoreCoordinator removePersistentStore:store error:nil];
+		[cordinator removePersistentStore:store error:nil];
 		[[NSFileManager defaultManager] removeItemAtPath:store.URL.path error:nil];
 	}
-
-	[_managedObjectContext release], _managedObjectContext = nil;
-	[_persistentStoreCoordinator release], _persistentStoreCoordinator = nil;
-	[_managedObjectModel release], _managedObjectModel = nil;
+	_persistentStoreCoordinator = nil;
 }
 
 @end
