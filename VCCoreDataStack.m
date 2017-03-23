@@ -105,6 +105,19 @@
 	return _managedObjectContext;
 }
 
+- (NSManagedObjectContext *)privateManagedObjectContext {
+	NSManagedObjectContext *privateManagedObjectContext = nil;
+	NSManagedObjectContext *managedObjectContext = [self managedObjectContext];
+	if (managedObjectContext != nil) {
+		privateManagedObjectContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+		[privateManagedObjectContext performBlockAndWait:^{
+			[privateManagedObjectContext setParentContext:managedObjectContext];
+		}];
+	}
+	
+	return privateManagedObjectContext;
+}
+
 - (void)saveManagedObjectContext:(NSManagedObjectContext *)managedObjectContext
 {
 	if (managedObjectContext == nil) {

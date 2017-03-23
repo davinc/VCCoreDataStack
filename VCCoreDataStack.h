@@ -38,6 +38,8 @@
 @property (nonatomic, readonly) NSPersistentStoreCoordinator *persistentStoreCoordinator;
 @property (nonatomic, readonly) NSManagedObjectContext *managedObjectContext;
 
+- (NSManagedObjectContext *)privateManagedObjectContext;
+
 - (id)initWithManagedObjectModelUrl:(NSURL *)managedObjectModelUrl;
 
 - (void)saveManagedObjectContext:(NSManagedObjectContext *)managedObjectContext;
