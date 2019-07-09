@@ -74,8 +74,14 @@
 	NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:[fileName stringByAppendingString:@".sqlite"]];
 	
 	NSError *error = nil;
+	NSDictionary *options = @{NSMigratePersistentStoresAutomaticallyOption:[NSNumber numberWithBool:YES],
+                              NSInferMappingModelAutomaticallyOption:[NSNumber numberWithBool:YES]};
 	_persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
-	if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error]) {
+	if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
+                                                   configuration:nil
+                                                             URL:storeURL
+                                                         options:options
+                                                           error:&error]) {
 		NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
 		
 		// delete old file and create new one
