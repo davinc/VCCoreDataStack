@@ -156,8 +156,16 @@
 	NSPersistentStoreCoordinator *cordinator = [self persistentStoreCoordinator];
 	NSArray *stores = [cordinator persistentStores];
 	for(NSPersistentStore *store in stores) {
-		[cordinator removePersistentStore:store error:nil];
-		[[NSFileManager defaultManager] removeItemAtPath:store.URL.path error:nil];
+		if (@available(iOS 9.0, *)) {
+		    [cordinator destroyPersistentStoreAtURL:store.URL
+						   withType:NSSQLiteStoreType
+						    options:nil
+						      error:nil];
+		} else {
+		    // Fallback on earlier versions
+		    [cordinator removePersistentStore:store error:nil];
+		    [[NSFileManager defaultManager] removeItemAtPath:store.URL.path error:nil];
+		}
 	}
 	_persistentStoreCoordinator = nil;
 }
