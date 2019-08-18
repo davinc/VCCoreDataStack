@@ -157,14 +157,26 @@
 	NSArray *stores = [cordinator persistentStores];
 	for(NSPersistentStore *store in stores) {
 		if (@available(iOS 9.0, *)) {
-		    [cordinator destroyPersistentStoreAtURL:store.URL
-						   withType:NSSQLiteStoreType
-						    options:nil
-						      error:nil];
+                    NSError *error = nil;
+		    if(![cordinator destroyPersistentStoreAtURL:store.URL
+						       withType:NSSQLiteStoreType
+						        options:nil
+						          error:&error]) {
+			// do some real error handling
+			NSAssert(FALSE, @"Unresolved error %@, %@", error, [error userInfo]);
+		    }
 		} else {
 		    // Fallback on earlier versions
-		    [cordinator removePersistentStore:store error:nil];
-		    [[NSFileManager defaultManager] removeItemAtPath:store.URL.path error:nil];
+		    NSError *error = nil;
+		    if(![cordinator removePersistentStore:store error:&error]) {
+			// do some real error handling
+			NSAssert(FALSE, @"Unresolved error %@, %@", error, [error userInfo]);
+		    }
+		    error = nil;
+		    if(![[NSFileManager defaultManager] removeItemAtPath:store.URL.path error:nil]) {
+			// do some real error handling
+			NSAssert(FALSE, @"Unresolved error %@, %@", error, [error userInfo]);
+		    }
 		}
 	}
 	_persistentStoreCoordinator = nil;
